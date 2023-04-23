@@ -11,6 +11,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonObjectRequest
@@ -27,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var usdImageView: ImageView
     private lateinit var cadImageView: ImageView
+    private lateinit var swipeRefresh: SwipeRefreshLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,12 +39,26 @@ class MainActivity : AppCompatActivity() {
         usdImageView = findViewById(R.id.usdImageView)
         cadImageView = findViewById(R.id.cadImageView)
         progressBar = findViewById(R.id.progressBar)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
 
         usdImageView.visibility = View.GONE
         cadImageView.visibility = View.GONE
 
         request(usdUrl, usdTextView, this, applicationContext, progressBar, usdImageView)
         request(cadUrl, cadTextView, this, applicationContext, progressBar, cadImageView)
+
+        swipeRefresh.setOnRefreshListener {
+            usdImageView.visibility = View.GONE
+            cadImageView.visibility = View.GONE
+            usdTextView.visibility = View.INVISIBLE
+            cadTextView.visibility = View.INVISIBLE
+            progressBar.visibility = View.VISIBLE
+
+            request(usdUrl, usdTextView, this, applicationContext, progressBar, usdImageView)
+            request(cadUrl, cadTextView, this, applicationContext, progressBar, cadImageView)
+
+            swipeRefresh.isRefreshing = false
+        }
 
     }
 }
@@ -64,29 +80,26 @@ private fun request(
             Handler().postDelayed({
                 progressBar.visibility = View.GONE
                 imageView.visibility = View.VISIBLE
+                textView.visibility = View.VISIBLE
+
                 textView.text = "${currency.uppercase()}: ${priceFormatter(price)}"
             }, 1)
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(
-                context,
-                "Oops! Something went failed.",
-                Toast.LENGTH_SHORT
-            )
-                .show()
+                context, "Oops! Something went failed.", Toast.LENGTH_SHORT
+            ).show()
+            progressBar.visibility = View.GONE
         }
 
     }, { error ->
         Log.e("tag", "RESPONSE IS $error")
         Toast.makeText(
-            context,
-            "Failed! Check your internet connection.",
-            Toast.LENGTH_SHORT
-        )
-            .show()
+            context, "Failed! Check your internet connection.", Toast.LENGTH_SHORT
+        ).show()
+        progressBar.visibility = View.GONE
     })
     queue.add(request)
-
 }
 
 private fun priceFormatter(priceString: String): String {
